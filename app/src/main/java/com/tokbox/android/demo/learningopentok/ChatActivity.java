@@ -6,12 +6,13 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import com.opentok.android.OpentokError;
 import com.opentok.android.Session;
 import com.opentok.android.Stream;
+import com.opentok.android.OpentokError;
 
 
-public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener, Session.SessionListener {
+public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener,
+        Session.SessionListener {
 
     private static final String LOG_TAG = ChatActivity.class.getSimpleName();
 
@@ -60,7 +61,12 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         mSession.connect(mToken);
     }
 
-    /* Web Service Coordinator methods */
+    private void logOpenTokError(OpentokError opentokError) {
+        Log.e(LOG_TAG, "Error Domain: " + opentokError.getErrorDomain().name());
+        Log.e(LOG_TAG, "Error Code: " + opentokError.getErrorCode().name());
+    }
+
+    /* Web Service Coordinator delegate methods */
 
     @Override
     public void onSessionConnectionDataReady(String apiKey, String sessionId, String token) {
@@ -73,7 +79,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     @Override
     public void onError(Exception error) {
-        Log.e(LOG_TAG, error.getMessage());
+        Log.e(LOG_TAG, "Web Service error: " + error.getMessage());
     }
 
     /* Session Listener methods */
