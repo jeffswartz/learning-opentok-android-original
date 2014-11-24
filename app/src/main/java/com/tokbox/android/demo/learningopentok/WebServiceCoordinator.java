@@ -1,0 +1,69 @@
+package com.tokbox.android.demo.learningopentok;
+
+import android.content.Context;
+import android.util.Log;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+public class WebServiceCoordinator {
+
+    private static final String CHAT_SERVER_URL = "http://192.168.1.8:5000";
+    private static final String SESSION_INFO_ENDPOINT = CHAT_SERVER_URL + "/";
+
+    private static final String LOG_TAG = ChatActivity.class.getSimpleName();
+
+    private final Context context;
+    private Listener delegate;
+
+    public WebServiceCoordinator(Context context, Listener delegate) {
+        this.context = context;
+        this.delegate = delegate;
+    }
+
+    public void fetchSessionConnectionData() {
+        RequestQueue reqQueue = Volley.newRequestQueue(context);
+        reqQueue.add(new JsonObjectRequest(Request.Method.GET, SESSION_INFO_ENDPOINT, null, new Response.Listener<JSONObject>() {
+            @Override
+            public void onResponse(JSONObject response) {
+                try {
+                    String apiKey = response.getString("apiKey");
+                    String sessionId = response.getString("sessionId");
+                    String token = response.getString("token");
+
+                    Log.i(LOG_TAG, apiKey);
+                    Log.i(LOG_TAG, sessionId);
+                    Log.i(LOG_TAG, token);
+
+                    // TODO: notify delegate
+                    delegate.onSessionConnectionDataReady(apiKey, sessionId, token);
+
+                } catch (JSONException e) {
+                    // TODO: handle exception
+                    // TODO: notify delegate
+                    e.printStackTrace();
+                }
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                // TODO: handle errors
+                // TODO: notify delegate
+                Log.e(LOG_TAG, "Session Connection Data request failed");
+                Log.e(LOG_TAG, error.toString());
+            }
+        }));
+    }
+
+    public static interface Listener {
+        void onSessionConnectionDataReady(String apiKey, String sessionId, String token);
+    }
+}
+
