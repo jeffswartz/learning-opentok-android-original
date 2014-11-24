@@ -6,8 +6,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.opentok.android.OpentokError;
+import com.opentok.android.Session;
+import com.opentok.android.Stream;
 
-public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener {
+
+public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener, Session.SessionListener {
 
     private static final String LOG_TAG = ChatActivity.class.getSimpleName();
 
@@ -16,6 +20,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
     private String mApiKey;
     private String mSessionId;
     private String mToken;
+    private Session mSession;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -26,7 +31,6 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         mWebServiceCoordinator = new WebServiceCoordinator(this, this);
         mWebServiceCoordinator.fetchSessionConnectionData();
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -50,15 +54,21 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         return super.onOptionsItemSelected(item);
     }
 
+    private void initializeSession() {
+        mSession = new Session(this, mApiKey, mSessionId);
+        mSession.setSessionListener(this);
+        mSession.connect(mToken);
+    }
+
+    /* Web Service Coordinator methods */
+
     @Override
     public void onSessionConnectionDataReady(String apiKey, String sessionId, String token) {
         mApiKey = apiKey;
         mSessionId = sessionId;
         mToken = token;
 
-        Log.i(LOG_TAG, mApiKey);
-        Log.i(LOG_TAG, mSessionId);
-        Log.i(LOG_TAG, mToken);
+        initializeSession();
     }
 
     @Override
@@ -66,4 +76,30 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         Log.e(LOG_TAG, error.getMessage());
     }
 
+    /* Session Listener methods */
+
+    @Override
+    public void onConnected(Session session) {
+        Log.i(LOG_TAG, "Session Connected");
+    }
+
+    @Override
+    public void onDisconnected(Session session) {
+        Log.i(LOG_TAG, "Session Disconnected");
+    }
+
+    @Override
+    public void onStreamReceived(Session session, Stream stream) {
+        Log.i(LOG_TAG, "Stream Received");
+    }
+
+    @Override
+    public void onStreamDropped(Session session, Stream stream) {
+        Log.i(LOG_TAG, "Stream Dropped");
+    }
+
+    @Override
+    public void onError(Session session, OpentokError opentokError) {
+        Log.e(LOG_TAG, opentokError.getMessage());
+    }
 }
