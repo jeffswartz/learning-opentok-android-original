@@ -14,17 +14,6 @@
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true" />
 
-    <EditText
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/message_edit_text"
-        android:layout_alignParentBottom="true"
-        android:layout_toStartOf="@+id/send_button"
-        android:inputType="text"
-        android:hint="Message"
-        android:singleLine="true"
-        android:enabled="false" />
-
     <FrameLayout
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
@@ -48,5 +37,16 @@
             android:background="@color/publisher_border_color" />
 
     </FrameLayout>
+
+    <EditText
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/message_edit_text"
+        android:layout_alignParentBottom="true"
+        android:layout_toStartOf="@+id/send_button"
+        android:inputType="text"
+        android:hint="Message"
+        android:singleLine="true"
+        android:enabled="false" />
 
 </RelativeLayout>
