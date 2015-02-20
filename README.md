@@ -23,14 +23,12 @@ The code for this sample is found the following git branches:
 
 * *archiving* -- This branch shows you how to record the session.
 
-* *signaling.step-1* -- This branch shows you how to use the OpenTok signaling API to implement
-  text chat.
+* *signaling.step-1* -- This branch shows you how to use the OpenTok signaling API.
 
-* *signaling.step-2* -- This branch shows you how to use the OpenTok signaling API to implement
-  text chat.
+* *signaling.step-2* -- This branch shows you how to impliment text chat using the OpenTok
+signaling API.
 
-* *signaling.step-3* -- This branch shows you how to use the OpenTok signaling API to implement
-  text chat.
+* *signaling.step-3* -- This branch adds some UI improvements for the text chat feature.
 
 You will also need to clone the OpenTok PHP Getting Started repo and run its code on a
 PHP-enabled web server. See the next section for more information.
@@ -125,7 +123,8 @@ session ID, and token. This method sets the properties to these values and then 
 The Session class is defined by the OpenTok Android SDK. It represents the OpenTok session
 (which connects users).
 
-This app sets `this` as the listener for Session events, defined by the Session.SessionListener interface. The ChatActivity class implements this interface, and overrides its methods, such as
+This app sets `this` as the listener for Session events, defined by the Session.SessionListener 
+interface. The ChatActivity class implements this interface, and overrides its methods, such as
 the `onConnected(Session session)` method:
 
     @Override
@@ -144,7 +143,24 @@ interacting with the session in any way).
 
 The code for this section is added in the step-4 branch of the repo.
 
-Note that in addition to initializing and connecting to the session, the `onSessionConnectionDataReady()` method calls the `initializePublisher()` method:
+First, let's test the code in this branch:
+
+1. Find the test.html file in the root of the project. You will use the test.html file to
+   connect to the OpenTok session and view the audio-video stream published by the Android app:
+
+   * Edit the test.html file and set the `sessionCredentialsUrl` variable to match the
+     `ksessionCredentialsUrl` property used in the iOS app.
+
+   * Add the test.html file to a web server. (You cannot run WebRTC videos in web pages loaded
+     from the desktop.)
+
+   * In a browser, load the test.html file from the web server.
+
+2. Run the Android app. The Android app publishes an audio-video stream to the session and the
+   the web client app subscribes to the stream.
+
+Now lets look at the Android code. In addition to initializing and connecting to the session, the
+`onSessionConnectionDataReady()` method calls the `initializePublisher()` method:
 
       private void initializePublisher() {
           mPublisher = new Publisher(this);
@@ -218,6 +234,24 @@ If the publisher stops sending its stream to the session, the implementation of 
 
 ## 5: Subscribing to another client's audio-video stream
 
+The code for this section is added in the step-4 branch of the repo.
+
+First, let's test the code in this branch:
+
+1. Find the test.html file in the root of the project. You will use the test.html file to
+   connect to the OpenTok session and view the audio-video stream published by the Android app:
+
+   * Edit the test.html file and set the `sessionCredentialsUrl` variable to match the
+     `ksessionCredentialsUrl` property used in the iOS app.
+
+   * Add the test.html file to a web server. (You cannot run WebRTC videos in web pages loaded
+     from the desktop.)
+
+   * In a browser, load the test.html file from the web server.
+
+2. Run the Android app. The Android app subscribes to the audio-video stream published by the
+   web page.
+
 The `onStreamReceived(Session session, Stream stream)` method (defined in the
 Session.SessionListener interface) is called when a new stream is created in the session.
 The app implements this method with the following:
@@ -285,5 +319,181 @@ or to disconnect from the session), the implementation of the
         }
     }
 
+## signaling.step-1
+
+The code for this section is added in the signaling.step-1 branch of the repo.
+
+The OpenTok signaling API lets clients send text messages to other clients connected to the
+OpenTok session. You can send a signal message to a specific client, or you can send
+a message to every client connected to the session.
+
+In this branch, the following code is added to the `initializeSession()` method:
+
+    mSession.setSignalListener(this);
+
+This sets the ChatActivity object as the implementor of the SubscriberKit.SignalListener interface. This interface defines the `onSignalReceived(session, type, data, connection)` methods. This method
+is called when the client receives a signal from the session:
+
+    @Override
+    public void onSignalReceived(Session session, String type, String data, Connection connection) {
+        Toast toast = Toast.makeText(this, data, Toast.LENGTH_LONG);
+        toast.show();
+    }
+
+This app uses an android.widget.Toast object to display received signals.
+
+In the `onConnected(session)` method, the following code sends a signal when the app connects to the
+session:
+
+    mSession.sendSignal("", "Hello, Signaling!");
+
+This signal is sent to all clients connected to the session. The method has two parameters:
+
+* `type` (String) -- An optional parameter that can be used as a filter for types of signals.
+
+* `data` (String) -- The data to send with the signal.
+
+## signaling.step-2
+
+The code for this section is added in the signaling.step-2 branch of the repo.
+
+In this branch, the following code is added to the `initializeSession()` method:
+
+    mSendButton = (Button)findViewById(R.id.send_button);
+    mMessageEditText = (EditText)findViewById(R.id.message_edit_text);
+
+    // Attach handlers to UI
+    mSendButton.setOnClickListener(this);
+
+The main layout XML file adds a Button and and EditText element to the main view. This code adds
+properties to reference these objects. It also sets the ChatActivity object as the implementor of
+the View.OnClickListener interface. This interface defines the `onClick(View v)` method.
+
+In the `onConnected(Session session)` method (called when the app connects to the OpenTok session)
+the following line of code is added in this branch:
+
+    enableMessageViews();
+
+The `enableMessageViews()` method enables the Message text field and the Send button:
+
+    private void enableMessageViews() {
+        mMessageEditText.setEnabled(true);
+        mSendButton.setEnabled(true);
+    }
+
+The `onClick(View v)` method is called when the clicks the Send button:
+
+    @Override
+    public void onClick(View v) {
+        if (v.equals(mSendButton)) {
+            sendMessage();
+        }
+    }
+
+The `sendMessage()` method sends the text chat message (defined in the Message text field)
+to the OpenTok session:
+
+    private void sendMessage() {
+        disableMessageViews();
+        mSession.sendSignal(SIGNAL_TYPE_MESSAGE, mMessageEditText.getText().toString());
+        mMessageEditText.setText("");
+        enableMessageViews();
+    }
+
+Note that in this branch, the `type` of the signal is set to `SIGNAL_TYPE_MESSAGE`
+(a string defined as "message"). The `onSignalReceived()` method checks to see if the
+signal received is of this type:
+
+    @Override
+    public void onSignalReceived(Session session, String type, String data, Connection connection) {
+        switch (type) {
+            case SIGNAL_TYPE_MESSAGE:
+                showMessage(data);
+                break;
+        }
+    }
+
+## signaling.step-3
+
+The code for this section is added in the signaling.step-3 branch of the repo.
+
+First, let's test the code in this branch:
+
+1. Find the test.html file in the root of the project. You will use the test.html file to
+   connect to the OpenTok session and view the audio-video stream published by the Android app:
+
+   * Edit the test.html file and set the `sessionCredentialsUrl` variable to match the
+     `ksessionCredentialsUrl` property used in the iOS app.
+
+   * Add the test.html file to a web server. (You cannot run WebRTC videos in web pages loaded
+     from the desktop.)
+
+   * In a browser, load the test.html file from the web server.
+
+2. Run the Android app. Enter some chat message in the Message text field, then click the Send
+   button. The web page displays the text message sent by the Android app. You can also send a
+   message from the web page to the Android app.
+
+Instead of using a Toast object to display received signals, the code in this branch uses an
+android.widget.ListView object. This lets the app display more than one message at a time.
+This branch adds the following code to the `onCreate()` method:
+
+    mMessageHistoryListView = (ListView)findViewById(R.id.message_history_list_view);
+
+    // Attach data source to message history
+    mMessageHistory = new ChatMessageAdapter(this);
+    mMessageHistoryListView.setAdapter(mMessageHistory);
+
+This branch adds code that differentiates between signals (text chat messages) sent from the local
+Android client and those sent from other clients connected to the session. The
+`onSignalReceived(session, type, data, connection)` method checks the Connection object for
+the received signal with the Connection object returned by `mSession.getConnection()`:
+
+    @Override
+    public void onSignalReceived(Session session, String type, String data, Connection connection) {
+    boolean remote = !connection.equals(mSession.getConnection());
+        switch (type) {
+            case SIGNAL_TYPE_MESSAGE:
+                showMessage(data);
+                showMessage(data, remote);
+                break;
+        }
+    }
+
+The Connection object of the received signal represents the connection to the session for the client
+that sent the signal. This will only match the Connection object returned by
+`mSession.getConnection()` if the signal was sent by the local client.
+
+The `showMessage(messageData, remote)` method has a new second parameter: remote. This is set
+to `true` if the message was sent another client (and `false` if it was sent by the local
+Android client):
+
+    private void showMessage(String messageData, boolean remote) {
+        ChatMessage message = ChatMessage.fromData(messageData);
+        message.setRemote(remote);
+        mMessageHistory.add(message);
+     }
+
+The `ChatMessage.fromData()` converts the message data (the data in the received signal)
+into a ChatMessage object. The mMessageHistoryListView uses the mMessageHistory object as
+the adaptor for the data in the list view. The mMessageHistory property is an
+android.widget.ArrayAdapter object. This tutorial focuses on the OpenTok Android SDK API. For more
+information on the Android classes used in this text chat implementation, see the docs for the
+following:
+
+* [ArrayAdaptor] [2]
+* [ListView] [3]
+
+Other resources
+---------------
+
+See the following:
+
+* [API reference] [4] -- Provides details on the OpenTok iOS Android API
+* [Tutorials] [5] -- Includes conceptual information and code samples for all OpenTok features
 
 [1]: https://tokbox.com/opentok/libraries/client/android/
+[2]: http://developer.android.com/reference/android/widget/ArrayAdapter.html
+[3]: http://developer.android.com/reference/android/widget/ListView.html
+[4]: https://tokbox.com/opentok/libraries/client/android/reference/
+[5]: https://tokbox.com/opentok/tutorials/
