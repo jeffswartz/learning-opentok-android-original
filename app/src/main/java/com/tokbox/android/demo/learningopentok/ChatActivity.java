@@ -106,6 +106,6 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     @Override
     public void onError(Session session, OpentokError opentokError) {
-        Log.e(LOG_TAG, opentokError.getMessage());
+        logOpenTokError(opentokError);
     }
 }
