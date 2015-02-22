@@ -42,28 +42,23 @@ public class WebServiceCoordinator {
                     Log.i(LOG_TAG, sessionId);
                     Log.i(LOG_TAG, token);
 
-                    // TODO: notify delegate
                     delegate.onSessionConnectionDataReady(apiKey, sessionId, token);
 
                 } catch (JSONException e) {
-                    // TODO: handle exception
-                    // TODO: notify delegate
-                    e.printStackTrace();
+                    delegate.onError(e);
                 }
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                // TODO: handle errors
-                // TODO: notify delegate
-                Log.e(LOG_TAG, "Session Connection Data request failed");
-                Log.e(LOG_TAG, error.toString());
+                delegate.onError(error);
             }
         }));
     }
 
     public static interface Listener {
         void onSessionConnectionDataReady(String apiKey, String sessionId, String token);
+        void onError(Exception error);
     }
 }
 
