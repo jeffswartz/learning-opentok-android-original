@@ -18,7 +18,7 @@ public class WebServiceCoordinator {
     private static final String CHAT_SERVER_URL = "http://192.168.1.8:5000";
     private static final String SESSION_INFO_ENDPOINT = CHAT_SERVER_URL + "/";
 
-    private static final String LOG_TAG = ChatActivity.class.getSimpleName();
+    private static final String LOG_TAG = WebServiceCoordinator.class.getSimpleName();
 
     private final Context context;
     private Listener delegate;
