@@ -11,6 +11,7 @@ import com.opentok.android.Session;
 import com.opentok.android.Stream;
 import com.opentok.android.Publisher;
 import com.opentok.android.PublisherKit;
+import com.opentok.android.BaseVideoRenderer;
 import com.opentok.android.OpentokError;
 
 
@@ -73,6 +74,8 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         mPublisher = new Publisher(this);
         mPublisher.setPublisherListener(this);
         mPublisher.setCameraListener(this);
+        mPublisher.getRenderer().setStyle(BaseVideoRenderer.STYLE_VIDEO_SCALE,
+                BaseVideoRenderer.STYLE_VIDEO_FILL);
         mPublisherViewContainer.addView(mPublisher.getView());
     }
 
