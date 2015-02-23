@@ -16,7 +16,7 @@ import com.opentok.android.OpentokError;
 
 
 public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener,
-        Session.SessionListener, PublisherKit.PublisherListener, Publisher.CameraListener {
+        Session.SessionListener, PublisherKit.PublisherListener {
 
     private static final String LOG_TAG = ChatActivity.class.getSimpleName();
 
@@ -73,7 +73,6 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
     private void initializePublisher() {
         mPublisher = new Publisher(this);
         mPublisher.setPublisherListener(this);
-        mPublisher.setCameraListener(this);
         mPublisher.getRenderer().setStyle(BaseVideoRenderer.STYLE_VIDEO_SCALE,
                 BaseVideoRenderer.STYLE_VIDEO_FILL);
         mPublisherViewContainer.addView(mPublisher.getView());
@@ -146,18 +145,6 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     @Override
     public void onError(PublisherKit publisherKit, OpentokError opentokError) {
-        logOpenTokError(opentokError);
-    }
-
-    /* Camera Listener methods */
-
-    @Override
-    public void onCameraChanged(Publisher publisher, int i) {
-        Log.i(LOG_TAG, "Camera Changed");
-    }
-
-    @Override
-    public void onCameraError(Publisher publisher, OpentokError opentokError) {
         logOpenTokError(opentokError);
     }
 }
