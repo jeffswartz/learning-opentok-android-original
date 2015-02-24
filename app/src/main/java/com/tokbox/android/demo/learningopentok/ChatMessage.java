@@ -1,11 +1,6 @@
 package com.tokbox.android.demo.learningopentok;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 public class ChatMessage {
-
-    public static final String KEY_TEXT = "text";
 
     private String mMessageText;
     private Boolean mRemote;
@@ -16,17 +11,7 @@ public class ChatMessage {
     }
 
     public static ChatMessage fromData(String messageData) {
-        JSONObject messageJson;
-        String messageText;
-        ChatMessage message;
-        try {
-            messageJson = new JSONObject(messageData);
-            messageText = messageJson.getString(KEY_TEXT);
-            message = new ChatMessage(messageText);
-        } catch (JSONException e) {
-            message = null;
-        }
-        return message;
+        return new ChatMessage(messageData);
     }
 
     public String getMessageText() {
@@ -43,14 +28,6 @@ public class ChatMessage {
 
     @Override
     public String toString() {
-        JSONObject messageJson = new JSONObject();
-        String messageData;
-        try {
-            messageJson.put(KEY_TEXT, mMessageText);
-            messageData = messageJson.toString();
-        } catch (JSONException e) {
-            messageData = null;
-        }
-        return messageData;
+        return mMessageText;
     }
 }
