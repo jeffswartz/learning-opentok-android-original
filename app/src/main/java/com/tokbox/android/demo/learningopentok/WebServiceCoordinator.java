@@ -45,20 +45,20 @@ public class WebServiceCoordinator {
                     delegate.onSessionConnectionDataReady(apiKey, sessionId, token);
 
                 } catch (JSONException e) {
-                    delegate.onSessionConnectionDataError(e);
+                    delegate.onWebServiceCoordinatorError(e);
                 }
             }
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                delegate.onSessionConnectionDataError(error);
+                delegate.onWebServiceCoordinatorError(error);
             }
         }));
     }
 
     public static interface Listener {
         void onSessionConnectionDataReady(String apiKey, String sessionId, String token);
-        void onSessionConnectionDataError(Exception error);
+        void onWebServiceCoordinatorError(Exception error);
     }
 }
 

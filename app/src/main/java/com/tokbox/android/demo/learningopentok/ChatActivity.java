@@ -78,7 +78,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
     }
 
     @Override
-    public void onSessionConnectionDataError(Exception error) {
+    public void onWebServiceCoordinatorError(Exception error) {
         Log.e(LOG_TAG, "Web Service error: " + error.getMessage());
     }
 
