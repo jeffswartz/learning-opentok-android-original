@@ -72,8 +72,7 @@ public class WebServiceCoordinator {
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                // TODO: send errors to general error listener
-                //delegate.onArchiveError(error);
+                delegate.onWebServiceCoordinatorError(error);
             }
         }));
     }
@@ -88,8 +87,7 @@ public class WebServiceCoordinator {
         }, new Response.ErrorListener() {
             @Override
             public void onErrorResponse(VolleyError error) {
-                // TODO: send errors to general error listener
-                //delegate.onArchiveError(error);
+                delegate.onWebServiceCoordinatorError(error);
             }
         }));
     }
