@@ -6,12 +6,10 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ListView;
-import android.widget.Toast;
 
 import com.opentok.android.Session;
 import com.opentok.android.Stream;
@@ -22,9 +20,6 @@ import com.opentok.android.Subscriber;
 import com.opentok.android.SubscriberKit;
 import com.opentok.android.BaseVideoRenderer;
 import com.opentok.android.OpentokError;
-
-import java.util.ArrayList;
-import java.util.List;
 
 
 public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener,
@@ -42,6 +37,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
     private Session mSession;
     private Publisher mPublisher;
     private Subscriber mSubscriber;
+    private ChatMessageAdapter mMessageHistory;
 
     private FrameLayout mPublisherViewContainer;
     private FrameLayout mSubscriberViewContainer;
@@ -61,10 +57,8 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         mMessageHistoryListView = (ListView)findViewById(R.id.message_history_list_view);
 
         // Attach data source to message history
-        List<String> mMessageHistory = new ArrayList<String>();
-        mMessageHistory.add("Test Message");
-        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.message_single, R.id.text1, mMessageHistory);
-        mMessageHistoryListView.setAdapter(adapter);
+        mMessageHistory = new ChatMessageAdapter(this);
+        mMessageHistoryListView.setAdapter(mMessageHistory);
 
         // Attach handlers to UI
         mSendButton.setOnClickListener(this);
@@ -113,7 +107,10 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     private void sendMessage() {
         disableMessageViews();
-        mSession.sendSignal(SIGNAL_TYPE_CHAT, mMessageEditText.getText().toString());
+
+        ChatMessage message = new ChatMessage(mMessageEditText.getText().toString());
+        mSession.sendSignal(SIGNAL_TYPE_CHAT, message.toString());
+
         mMessageEditText.setText("");
         enableMessageViews();
     }
@@ -128,9 +125,10 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         mSendButton.setEnabled(true);
     }
 
-    private void showMessage(String message) {
-        Toast toast = Toast.makeText(this, getString(R.string.message_toast_label, message), Toast.LENGTH_SHORT);
-        toast.show();
+    private void showMessage(String messageData, boolean remote) {
+        ChatMessage message = ChatMessage.fromData(messageData);
+        message.setRemote(remote);
+        mMessageHistory.add(message);
     }
 
     private void logOpenTokError(OpentokError opentokError) {
@@ -252,9 +250,10 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     @Override
     public void onSignalReceived(Session session, String type, String data, Connection connection) {
+        boolean remote = !connection.equals(mSession.getConnection());
         switch (type) {
             case SIGNAL_TYPE_CHAT:
-                showMessage(data);
+                showMessage(data, remote);
                 break;
         }
     }
