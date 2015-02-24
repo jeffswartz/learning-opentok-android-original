@@ -27,7 +27,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         View.OnClickListener, Session.SignalListener{
 
     private static final String LOG_TAG = ChatActivity.class.getSimpleName();
-    public static final String SIGNAL_TYPE_MESSAGE = "message";
+    public static final String SIGNAL_TYPE_CHAT = "chat";
 
     private WebServiceCoordinator mWebServiceCoordinator;
 
@@ -100,7 +100,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     private void sendMessage() {
         disableMessageViews();
-        mSession.sendSignal(SIGNAL_TYPE_MESSAGE, mMessageEditText.getText().toString());
+        mSession.sendSignal(SIGNAL_TYPE_CHAT, mMessageEditText.getText().toString());
         mMessageEditText.setText("");
         enableMessageViews();
     }
@@ -240,7 +240,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
     @Override
     public void onSignalReceived(Session session, String type, String data, Connection connection) {
         switch (type) {
-            case SIGNAL_TYPE_MESSAGE:
+            case SIGNAL_TYPE_CHAT:
                 showMessage(data);
                 break;
         }
