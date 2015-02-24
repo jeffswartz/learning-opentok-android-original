@@ -6,9 +6,11 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import com.opentok.android.Session;
@@ -20,6 +22,9 @@ import com.opentok.android.Subscriber;
 import com.opentok.android.SubscriberKit;
 import com.opentok.android.BaseVideoRenderer;
 import com.opentok.android.OpentokError;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener,
@@ -42,6 +47,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
     private FrameLayout mSubscriberViewContainer;
     private Button mSendButton;
     private EditText mMessageEditText;
+    private ListView mMessageHistoryListView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +58,13 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         mSubscriberViewContainer = (FrameLayout)findViewById(R.id.subscriber_container);
         mSendButton = (Button)findViewById(R.id.send_button);
         mMessageEditText = (EditText)findViewById(R.id.message_edit_text);
+        mMessageHistoryListView = (ListView)findViewById(R.id.message_history_list_view);
+
+        // Attach data source to message history
+        List<String> mMessageHistory = new ArrayList<String>();
+        mMessageHistory.add("Test Message");
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this, R.layout.message_single, R.id.text1, mMessageHistory);
+        mMessageHistoryListView.setAdapter(adapter);
 
         // Attach handlers to UI
         mSendButton.setOnClickListener(this);
