@@ -24,7 +24,7 @@ import com.opentok.android.OpentokError;
 
 public class ChatActivity extends ActionBarActivity implements WebServiceCoordinator.Listener,
         Session.SessionListener, PublisherKit.PublisherListener, SubscriberKit.SubscriberListener,
-        View.OnClickListener, Session.SignalListener{
+        View.OnClickListener, Session.SignalListener {
 
     private static final String LOG_TAG = ChatActivity.class.getSimpleName();
     public static final String SIGNAL_TYPE_CHAT = "chat";
@@ -127,8 +127,10 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     private void showMessage(String messageData, boolean remote) {
         ChatMessage message = ChatMessage.fromData(messageData);
-        message.setRemote(remote);
-        mMessageHistory.add(message);
+        if (message != null) {
+            message.setRemote(remote);
+            mMessageHistory.add(message);
+        }
     }
 
     private void logOpenTokError(OpentokError opentokError) {
