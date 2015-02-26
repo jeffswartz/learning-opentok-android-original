@@ -36,16 +36,30 @@ PHP-enabled web server. See the next section for more information.
 
 ## 0: Starting Point
 
-The step-0 branch includes a basic Android application that already includes the OpenTok Android SDK
-and any settings the app needs to get running.
+The step-0 branch includes a basic Android application. Complete the following steps to get it
+running in Android Studio (and to add the OpenTok iOS SDK):
 
-1. In Android Studio, select the File > Open command. Navigate to the root directory of this
-   project and click the Choose button. Open the project in a new window.
+1. In Android Studio, select the File > Import Project command. Navigate to the root directory of
+   this project, select the build.gradle file, and then click the OK button. The project opens in a
+   new window.
 
    The Java code for the application is the ChatActivity class in the
    com.tokbox.android.demo.learningopentok package.
 
-2. Debug the project on a supported device.
+2. Download the OpenTok Android SDK from JEff.
+
+3. Locate the opentok-android-sdk-2.4.0.jar file in the OpenTok/libs directory of the OpenTok
+   Android SDK, and drag it into the app/libs directory of the Android Studio project explorer.
+
+4. If the app/src/main/jniLibs directory does not exist in the Android Studio
+   project explorer, right-click the app/src/main directory and select the New Resource Directory
+   command, enter jniLibs as the directory name, and then click OK.
+
+6. Locate the armeabi and x86 directories in the OpenTok/libs directory of the OpenTok
+   Android SDK, and drag them into the app/src/main/jniLibs directory of the Android Studio
+   project explorer.
+
+6. Debug the project on a supported device.
 
    For a list of supported devices, see the "Developer and client requirements"
    on [this page] [1].
