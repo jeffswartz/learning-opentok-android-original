@@ -8,8 +8,8 @@ chat session. The app uses the OpenTok Android SDK to implement the following:
 * Connect to an OpenTok session
 * Publish an audio-video stream to the session
 * Subscribe to another client's audio-video stream
-* Implement text chat
 * Record the session, stop the recording, and view the recording
+* Implement text chat
 
 The code for this sample is found the following git branches:
 
@@ -21,7 +21,7 @@ The code for this sample is found the following git branches:
 
 * *step-5* -- This branch shows you how to subscribe to a stream on the OpenTok session.
 
-* *archiving* -- This branch shows you how to record the session.
+* *archiving.step-1* -- This branch shows you how to record the session.
 
 * *signaling.step-1* -- This branch shows you how to use the OpenTok signaling API.
 
@@ -50,7 +50,7 @@ and any settings the app needs to get running.
    For a list of supported devices, see the "Developer and client requirements"
    on [this page] [1].
 
-## 1: Creating a Session (server side)
+## 1: Creating a session and defining archive REST API calls (server side)
 
 Before you can test the application, you need to set up a web service to handle some
 OpenTok-related API calls. The web service securely creates an OpenTok session.
@@ -74,7 +74,7 @@ Download the repo and run its code on a PHP-enabled web server. (TODO: Add a lin
 The HTTP POST request to the /service endpoint returns a response that includes the OpenTok
 session ID and token.
 
-## 2: Generating a Token (server side)
+## 2: Generating a token (server side)
 
 The web service also creates a token that the client uses to connect to the OpenTok session.
 The HTTP GET request to the /service endpoint returns a response that includes the OpenTok
@@ -234,7 +234,7 @@ If the publisher stops sending its stream to the session, the implementation of 
 
 ## 5: Subscribing to another client's audio-video stream
 
-The code for this section is added in the step-4 branch of the repo.
+The code for this section is added in the step-5 branch of the repo.
 
 First, let's test the code in this branch:
 
@@ -319,9 +319,98 @@ or to disconnect from the session), the implementation of the
         }
     }
 
+## archiving.step.1
+
+The code for this section is added in the archiving.step-1 branch of the repo. This code builds
+upon the code in the step-5 branch of the repo.
+
+The OpenTok archiving API lets you record audio-video streams in a session to MP4 files. You use
+server-side code to start and stop archive recordings. In the WebServiceCoordinator file, you set
+the following property to the base URL and endpoints of the web service the app calls to start
+archive recording, stop recording, and play back the recorded video:
+
+    private static final String CHAT_SERVER_URL = BuildConfig.CHAT_SERVER_URL;
+    private static final String SESSION_INFO_ENDPOINT = CHAT_SERVER_URL + "/session";
+    private static final String ARCHIVE_START_ENDPOINT = CHAT_SERVER_URL + "/start/:sessionId";
+    private static final String ARCHIVE_STOP_ENDPOINT = CHAT_SERVER_URL + "/stop/:archiveId";
+    private static final String ARCHIVE_PLAY_ENDPOINT = CHAT_SERVER_URL + "/view/:archiveId"
+
+When the user selects the Start Archive, Stop Archive, and Play Archive menu items from the action 
+bar or the options menu, the app calls the `startArchive()` and `stopArchive()`, and `playArchive()`
+methods. These call web services that call server-side code start and stop archive recordings.
+(See [Creating a session and defining archive REST API calls](#1-creating-a-session-and-defining-archive-REST-API-calls).)
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        switch(item.getItemId()) {
+            case R.id.action_settings:
+                return true;
+            case R.id.action_start_archive:
+                startArchive();
+                return true;
+            case R.id.action_stop_archive:
+                stopArchive();
+                return true;
+            case R.id.action_play_archive:
+                playArchive();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+
+Note that the ChatActivity class now implements the Session.ArchiveListener interface. This
+means that it implements methods for handling archive-related events.
+
+When archive recording starts, the implementation of the
+`onArchiveStarted(Session session, String archiveId, String archiveName)` method (defined
+by the Session.ArchiveListener interface) is called:
+
+    @Override
+    public void onArchiveStarted(Session session, String archiveId, String archiveName) {
+        mCurrentArchiveId = archiveId;
+        setStopArchiveEnabled(true);
+        mArchivingIndicatorView.setVisibility(View.VISIBLE);
+    }
+
+The method stores the archive ID (identifying the archive) to an `mCurrentArchiveId` property.
+The method also calls the `setStopArchiveEnabled(true)` method, which causes the Stop Recording
+menu item to be displayed. And it causes the `mArchivingIndicatorView` to be displayed (which
+displays an archiving indicator image).
+
+When the user selects the Stop Archive command, the app passes the archive ID along to the
+web service that stops the archive recording.
+
+When archive recording stops, the implementation of the
+`onArchiveStopped(Session session, String archiveId)` method (defined
+by the Session.ArchiveListener interface) is called:
+
+    @Override
+    public void onArchiveStopped(Session session, String archiveId) {
+        mPlayableArchiveId = archiveId;
+        mCurrentArchiveId = null;
+        setPlayArchiveEnabled(true);
+        setStartArchiveEnabled(true);
+        mArchivingIndicatorView.setVisibility(View.INVISIBLE);
+    }
+
+The method stores the archive ID (identifying the archive) to an `mPlayableArchiveId` property
+(and sets `mCurrentArchiveId` to `null`). The method also calls the `setPlayArchiveEnabled(false)`
+method, which disables the Play Archive menu item, and it calls `setStartArchiveEnabled(true)` to
+enable the Start Archive menu item. And it causes the `mArchivingIndicatorView` to be hidden.
+
+When the user clicks the Play Archive button, the `playArchive()` method
+opens a web page (in the device's web browser) that displays the archive recording, by calling
+the archive playback REST API, defined in [Creating a session and defining archive REST API calls](#1-creating-a-session-and-defining-archive-REST-API-calls).
+
 ## signaling.step-1
 
-The code for this section is added in the signaling.step-1 branch of the repo.
+The code for this section is added in the signaling.step-1 branch of the repo. This code builds
+upon the code in the step-5 branch of the repo.
 
 The OpenTok signaling API lets clients send text messages to other clients connected to the
 OpenTok session. You can send a signal message to a specific client, or you can send
@@ -474,7 +563,7 @@ Android client):
         mMessageHistory.add(message);
      }
 
-The `ChatMessage.fromData()` converts the message data (the data in the received signal)
+The `ChatMessage.fromData()` method converts the message data (the data in the received signal)
 into a ChatMessage object. The mMessageHistoryListView uses the mMessageHistory object as
 the adaptor for the data in the list view. The mMessageHistory property is an
 android.widget.ArrayAdapter object. This tutorial focuses on the OpenTok Android SDK API. For more
@@ -483,6 +572,7 @@ following:
 
 * [ArrayAdaptor] [2]
 * [ListView] [3]
+
 
 Other resources
 ---------------
