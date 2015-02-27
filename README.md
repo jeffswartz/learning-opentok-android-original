@@ -46,7 +46,7 @@ running in Android Studio (and to add the OpenTok iOS SDK):
    The Java code for the application is the ChatActivity class in the
    com.tokbox.android.demo.learningopentok package.
 
-2. Download the OpenTok Android SDK from JEff.
+2. Download the [OpenTok Android SDK](https://tokbox.com/opentok/libraries/client/android/).
 
 3. Locate the opentok-android-sdk-2.4.0.jar file in the OpenTok/libs directory of the OpenTok
    Android SDK, and drag it into the app/libs directory of the Android Studio project explorer.
@@ -69,8 +69,8 @@ running in Android Studio (and to add the OpenTok iOS SDK):
 Before you can test the application, you need to set up a web service to handle some
 OpenTok-related API calls. The web service securely creates an OpenTok session.
 
-The OpenTok PHP Getting Started repo includes code for setting up a web service that
-handles the following API calls:
+The [Learning OpenTok PHP](https://github.com/opentok/learning-opentok-php) repo includes code
+for setting up a web service that handles the following API calls:
 
 * "/service" -- The Android client calls this endpoint to get an OpenTok session ID, token,
   and API key.
@@ -83,7 +83,7 @@ handles the following API calls:
 * "/view" -- The Android client load this endpoint in a web browser to display the archive
   recording.
 
-Download the repo and run its code on a PHP-enabled web server. (TODO: Add a link.)
+Download the repo and run its code on a PHP-enabled web server,
 
 The HTTP POST request to the /service endpoint returns a response that includes the OpenTok
 session ID and token.
