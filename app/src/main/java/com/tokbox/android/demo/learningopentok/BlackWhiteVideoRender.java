@@ -7,6 +7,8 @@ import android.view.View;
 
 import com.opentok.android.BaseVideoRenderer;
 
+import java.nio.ByteBuffer;
+
 public class BlackWhiteVideoRender extends BaseVideoRenderer {
 
     GLSurfaceView mRenderView;
@@ -24,6 +26,13 @@ public class BlackWhiteVideoRender extends BaseVideoRenderer {
 
     @Override
     public void onFrame(Frame frame) {
+        // Modify U and V planes to produce a black and white image
+        ByteBuffer imageBuffer = frame.getBuffer();
+        int startU = frame.getWidth() * frame.getHeight();
+        for (int i = startU; i < imageBuffer.capacity(); i++) {
+            imageBuffer.put(i, (byte)128);
+        }
+
         mRenderer.displayFrame(frame);
         mRenderView.requestRender();
     }
