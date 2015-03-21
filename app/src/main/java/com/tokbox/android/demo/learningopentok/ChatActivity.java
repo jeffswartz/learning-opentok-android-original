@@ -143,7 +143,7 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     @Override
     public void onError(PublisherKit publisherKit, OpentokError opentokError) {
-        Log.e(LOG_TAG, opentokError.getMessage());
+        logOpenTokError(opentokError);
     }
 
     /* Camera Listener methods */
@@ -155,6 +155,6 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
 
     @Override
     public void onCameraError(Publisher publisher, OpentokError opentokError) {
-        Log.e(LOG_TAG, opentokError.getMessage());
+        logOpenTokError(opentokError);
     }
 }
