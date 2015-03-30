@@ -20,8 +20,6 @@ public class ScreensharingCapturer extends BaseVideoCapturer {
     private long mFrameProducerIntervalMillis = 1000 / FPS;
 
     private int[] frameBuffer;
-    private Bitmap bmp;
-    private Canvas canvas;
 
     private Runnable mFrameProducer = new Runnable() {
         @Override
@@ -32,19 +30,17 @@ public class ScreensharingCapturer extends BaseVideoCapturer {
             if (frameBuffer == null || mWidth != width || mHeight != height) {
                 mWidth = width;
                 mHeight = height;
-
-                if (bmp != null) {
-                    bmp.recycle();
-                }
-
-                bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-                canvas = new Canvas(bmp);
                 frameBuffer = new int[mWidth * mHeight];
             }
 
-            mContentView.draw(canvas);
-            bmp.getPixels(frameBuffer, 0, width, 0, 0, width, height);
-            provideIntArrayFrame(frameBuffer, ARGB, width, height, 0, false);
+            mContentView.setDrawingCacheEnabled(true);
+            mContentView.buildDrawingCache();
+            Bitmap bmp = mContentView.getDrawingCache();
+            if (bmp != null) {
+                bmp.getPixels(frameBuffer, 0, width, 0, 0, width, height);
+                mContentView.setDrawingCacheEnabled(false);
+                provideIntArrayFrame(frameBuffer, ARGB, width, height, 0, false);
+            }
 
             if (mCapturerHasStarted && !mCapturerIsPaused) {
                 mFrameProducerHandler.postDelayed(mFrameProducer, mFrameProducerIntervalMillis);

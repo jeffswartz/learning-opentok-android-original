@@ -46,8 +46,12 @@ public class ChatActivity extends ActionBarActivity implements WebServiceCoordin
         mPublisherViewContainer = (FrameLayout)findViewById(R.id.publisher_container);
         mSubscriberViewContainer = (FrameLayout)findViewById(R.id.subscriber_container);
         mScreensharedView = (WebView)findViewById(R.id.screenshared_view);
+        // In order to access pixels data, we need the view to be software renderer
+        // If view is renderer using GL backed source, we won't be able to access to its pixels
+        // so we won't be able to send them to the session
         mScreensharedView.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        mScreensharedView.loadUrl("https://tokbox.com/");
+        mScreensharedView.loadUrl("https://tokbox.com");
+        mScreensharedView.getSettings().setJavaScriptEnabled(true);
 
         // initialize WebServiceCoordinator and kick off request for necessary data
         mWebServiceCoordinator = new WebServiceCoordinator(this, this);
