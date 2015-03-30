@@ -12,8 +12,8 @@ import android.view.WindowManager;
 import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
-public class AndroidCameraHelper implements Camera.PreviewCallback {
-    public interface HelperListener {
+public class FrontCameraFrameProvider implements Camera.PreviewCallback {
+    public interface ProviderListener {
         void cameraFrameReady(byte[] data, int width, int height, int rotation, boolean mirror);
     }
 
@@ -38,9 +38,9 @@ public class AndroidCameraHelper implements Camera.PreviewCallback {
 
     private ReentrantLock mPreviewBufferLock = new ReentrantLock(); // sync
 
-    private HelperListener mListener;
+    private ProviderListener mListener;
 
-    public AndroidCameraHelper(Context context, int preferredWidth, int preferredHeight, int desiredFps) {
+    public FrontCameraFrameProvider(Context context, int preferredWidth, int preferredHeight, int desiredFps) {
         mCameraIndex = getFrontCameraIndex();
         mPreferredCaptureWidth = preferredWidth;
         mPreferredCaptureHeight = preferredHeight;
@@ -51,7 +51,7 @@ public class AndroidCameraHelper implements Camera.PreviewCallback {
         mCurrentDisplay = windowManager.getDefaultDisplay();
     }
 
-    public void setHelperListener(HelperListener listener) {
+    public void setHelperListener(ProviderListener listener) {
         mListener = listener;
     }
 
@@ -118,7 +118,7 @@ public class AndroidCameraHelper implements Camera.PreviewCallback {
         int maxFPS = 0;
         if (frameRates != null) {
             for (Integer frameRate : frameRates) {
-                if (frameRate > maxFPS) {
+                if (frameRate > maxFPS && frameRate <= mDesiredFps) {
                     maxFPS = frameRate;
                 }
             }

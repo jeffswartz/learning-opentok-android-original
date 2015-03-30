@@ -5,7 +5,7 @@ import android.content.Context;
 import com.opentok.android.BaseVideoCapturer;
 
 public class CameraVideoCapturer extends BaseVideoCapturer
-        implements AndroidCameraHelper.HelperListener {
+        implements FrontCameraFrameProvider.ProviderListener {
     
     private boolean mCapturerHasStarted;
     private boolean mCapturerIsPaused;
@@ -13,14 +13,14 @@ public class CameraVideoCapturer extends BaseVideoCapturer
     private int mWidth;
     private int mHeight;
     private int mDesiredFps;
-    private AndroidCameraHelper mHelper;
+    private FrontCameraFrameProvider mHelper;
 
     public CameraVideoCapturer(Context context, int width, int height, int fps) {
         mWidth = width;
         mHeight = height;
         mDesiredFps = fps;
 
-        mHelper = new AndroidCameraHelper(context, mWidth, mHeight, mDesiredFps);
+        mHelper = new FrontCameraFrameProvider(context, mWidth, mHeight, mDesiredFps);
         mHelper.setHelperListener(this);
     }
     @Override
