@@ -26,11 +26,17 @@ public class BlackWhiteVideoRender extends BaseVideoRenderer {
 
     @Override
     public void onFrame(Frame frame) {
-        // Modify U and V planes to produce a black and white image
         ByteBuffer imageBuffer = frame.getBuffer();
+
+        // Image buffer is represented using three planes, Y, U and V.
+        // Data is laid out in a linear way in the imageBuffer variable
+        // Y plane is first, and its size is the same of the image (width * height)
+        // U and V planes are next, in order to produce a B&W image, we set both
+        // planes with the same value.
+
         int startU = frame.getWidth() * frame.getHeight();
         for (int i = startU; i < imageBuffer.capacity(); i++) {
-            imageBuffer.put(i, (byte)128);
+            imageBuffer.put(i, (byte)-127);
         }
 
         mRenderer.displayFrame(frame);
