@@ -1,6 +1,7 @@
 package com.tokbox.android.demo.learningopentok;
 
 import android.content.Context;
+import android.os.Environment;
 import android.os.Handler;
 
 import com.opentok.android.BaseAudioDevice;
@@ -116,7 +117,16 @@ public class BasicAudioDevice extends BaseAudioDevice {
     @Override
     public boolean initRenderer() {
         mRendererBuffer = ByteBuffer.allocateDirect(SAMPLING_RATE * 2); // Each sample has 2 bytes
-        mRendererFile = new File(mContext.getFilesDir(), "output.raw");
+        mRendererFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                   , "output.raw");
+        if (!mRendererFile.exists()) {
+            try {
+                mRendererFile.getParentFile().mkdirs();
+                mRendererFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         return true;
     }
 
