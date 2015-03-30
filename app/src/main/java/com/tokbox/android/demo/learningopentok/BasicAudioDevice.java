@@ -19,7 +19,7 @@ public class BasicAudioDevice extends BaseAudioDevice {
     private AudioSettings mRendererSettings;
 
     private boolean mCapturerStarted;
-    private boolean mRenderStarted;
+    private boolean mRendererStarted;
 
     private boolean mAudioDriverPaused;
 
@@ -50,7 +50,7 @@ public class BasicAudioDevice extends BaseAudioDevice {
         mRendererSettings = new AudioSettings(SAMPLING_RATE, NUM_CHANNELS_RENDERING);
 
         mCapturerStarted = false;
-        mRenderStarted = false;
+        mRendererStarted = false;
 
         mAudioDriverPaused = false;
 
@@ -90,13 +90,13 @@ public class BasicAudioDevice extends BaseAudioDevice {
 
     @Override
     public boolean startRenderer() {
-        mRenderStarted = true;
+        mRendererStarted = true;
         return true;
     }
 
     @Override
     public boolean stopRenderer() {
-        mRenderStarted = false;
+        mRendererStarted = false;
         return true;
     }
 
