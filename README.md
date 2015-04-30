@@ -10,6 +10,12 @@ chat session. The app uses the OpenTok Android SDK to implement the following:
 * Subscribe to another client's audio-video stream
 * Record the session, stop the recording, and view the recording
 * Implement text chat
+* A simple custom audio driver for audio input and output
+* A custom video renderer
+* A simple custom video capturer
+* A custom video capturer that uses the device camera
+* Publishing a screen-sharing stream
+* A video capturer that lets you obtain still screen captures of the camera used by a publisher
 
 The code for this sample is found the following git branches:
 
@@ -25,19 +31,34 @@ The code for this sample is found the following git branches:
 
 * *signaling.step-1* -- This branch shows you how to use the OpenTok signaling API.
 
-* *signaling.step-2* -- This branch shows you how to impliment text chat using the OpenTok
+* *signaling.step-2* -- This branch shows you how to implement text chat using the OpenTok
 signaling API.
 
 * *signaling.step-3* -- This branch adds some UI improvements for the text chat feature.
 
-You will also need to clone the OpenTok PHP Getting Started repo and run its code on a
-PHP-enabled web server. See the next section for more information.
+* *basic-audio-driver.step-1* -- This branch shows you how to implement a custom audio driver that
+  uses a simple audio capturer.
+
+* *basic-audio-driver.step-2* -- This branch shows you how to implement a custom audio driver that
+  uses a simple audio renderer.
+
+* *basic_render.step-1* -- This branch shows the basics of implementing a custom video renderer
+  for an OpenTok subscriber.
+
+* *basic_capturer.step-1* -- This branch shows the basics of implementing a custom video capturer
+  for an OpenTok publisher.
+
+* *camera_capturer.step-1* - This branch shows you how to use a custom video capturer using
+  the device camera as the video source.
+
+* *screensharing.step-1* - This branch shows you how to use the device's screen (instead of a
+  camera) as the video source for a published stream.
 
 
 ## 0: Starting Point
 
 The step-0 branch includes a basic Android application. Complete the following steps to get it
-running in Android Studio (and to add the OpenTok iOS SDK):
+running in Android Studio (and to add the OpenTok Android SDK):
 
 1. In Android Studio, select the File > Import Project command. Navigate to the root directory of
    this project, select the build.gradle file, and then click the OK button. The project opens in a
@@ -163,7 +184,7 @@ First, let's test the code in this branch:
    connect to the OpenTok session and view the audio-video stream published by the Android app:
 
    * Edit the test.html file and set the `sessionCredentialsUrl` variable to match the
-     `ksessionCredentialsUrl` property used in the iOS app.
+     `ksessionCredentialsUrl` property used in the Android app.
 
    * Add the test.html file to a web server. (You cannot run WebRTC videos in web pages loaded
      from the desktop.)
@@ -256,7 +277,7 @@ First, let's test the code in this branch:
    connect to the OpenTok session and view the audio-video stream published by the Android app:
 
    * Edit the test.html file and set the `sessionCredentialsUrl` variable to match the
-     `ksessionCredentialsUrl` property used in the iOS app.
+     `ksessionCredentialsUrl` property used in the Android app.
 
    * Add the test.html file to a web server. (You cannot run WebRTC videos in web pages loaded
      from the desktop.)
@@ -526,7 +547,7 @@ First, let's test the code in this branch:
    connect to the OpenTok session and view the audio-video stream published by the Android app:
 
    * Edit the test.html file and set the `sessionCredentialsUrl` variable to match the
-     `ksessionCredentialsUrl` property used in the iOS app.
+     `ksessionCredentialsUrl` property used in the Android app.
 
    * Add the test.html file to a web server. (You cannot run WebRTC videos in web pages loaded
      from the desktop.)
@@ -588,12 +609,567 @@ following:
 * [ListView] [3]
 
 
+## basic_audio_driver.step-1
+
+To see the code for this sample, switch to the basic_audio_driver.step-1 branch. This branch shows
+you how to implement a custom audio driver and use a simple audio capturer for audio used by
+the stream published by the app.
+
+The OpenTok Android SDK lets you set up a custom audio driver for publishers and subscribers. You
+can use a custom audio driver to customize the audio sent to a publisher's stream. You can also
+customize the playback of subscribed streams' audio.
+
+This sample application uses the custom audio driver to publish white noise (a random audio signal)
+to its audio stream. It also uses the custom audio driver to capture the audio from subscribed
+streams and save it to a file.
+
+### Setting up the audio device and the audio bus
+
+In using a custom audio driver, you define a custom audio driver and an audio bus to be
+used by the app.
+
+The BasicAudioDevice class defines a basic audio device interface to be used by the app.
+It extends the BaseAudioDevice class, defined by the OpenTok Android SDK. To use a custom
+audio driver, call the `AudioDeviceManager.setAudioDevice(device)` method. This sample sets
+the audio device to an instance of the BasicAudioDevice class:
+
+    AudioDeviceManager.setAudioDevice(new BasicAudioDevice(this));
+
+Use the AudioSettings class, defined in the OpenTok Android SDK, to define the audio format used
+by the custom audio driver. The `BasicAudioDevice()` constructor instantiates two AudioSettings
+instances -- one for the custom audio capturer and one for the custom audio renderer. It sets
+the sample rate and number of channels for each:
+
+    public BasicAudioDevice(Context context) {
+        mContext = context;
+
+        mCaptureSettings = new AudioSettings(SAMPLING_RATE, NUM_CHANNELS_CAPTURING);
+        mRendererSettings = new AudioSettings(SAMPLING_RATE, NUM_CHANNELS_RENDERING);
+
+        mCapturerStarted = false;
+        mRendererStarted = false;
+
+        mAudioDriverPaused = false;
+
+        mCapturerHandler = new Handler();
+    }
+
+The constructor also sets up some local properties that report whether the device is capturing
+or rendering. It also sets a Handler instance to process the `mCapturer` Runnable object.
+
+The `BasicAudioDevice getAudioBus()` method gets the AudioBus instance that this audio device uses,
+defined by the BasicAudioDevice.AudioBus class. Use the AudioBus instance to send and receive audio
+samples to and from a session. The publisher will access the
+AudioBus object to obtain the audio samples. And subscribers will send audio samples (from
+subscribed streams) to the AudioBus object.
+
+### Capturing audio to be used by a publisher
+
+The `[OTAudioDevice startCapture:]` method is called when the audio device should start capturing
+audio to be published. The BasicAudioDevice implementation of this method starts the `mCapturer`
+thread to be run in the queue after 1 second:
+
+    public boolean startCapturer() {
+        mCapturerStarted = true;
+        mCapturerHandler.postDelayed(mCapturer, mCapturerIntervalMillis);
+        return true;
+    }
+
+The `mCapturer` thread produces a buffer containing samples of random data (white noise). It then
+calls the `writeCaptureData(data, numberOfSamples)` method of the AudioBus object, which sends the
+samples to the audio bus. The publisher in the application uses the samples sent to the audio bus to
+transmit as audio in the published stream. Then if a capture is still in progress (if
+the app is publishing), the `mCapturer` thread is run again after another second:
+
+    private Runnable mCapturer = new Runnable() {
+        @Override
+        public void run() {
+            mCapturerBuffer.rewind();
+
+            Random rand = new Random();
+            rand.nextBytes(mCapturerBuffer.array());
+
+            getAudioBus().writeCaptureData(mCapturerBuffer, SAMPLING_RATE);
+
+            if(mCapturerStarted && !mAudioDriverPaused) {
+                mCapturerHandler.postDelayed(mCapturer, mCapturerIntervalMillis);
+            }
+        }
+    };
+
+See the next step, basic_audio_driver.step-2, to see a simple implementation of a custom
+audio renderer.
+
+### Other notes on the audio driver API
+
+The AudioDevice class includes other methods that are implemented by the BasicAudioDevice class.
+However, this sample does not do anything interesting in these methods, so they are not included
+in this discussion.
+
+
+## basic_audio_driver.step-2
+
+To see the code for this sample, switch to the basic_audio_driver.step-2 branch. This branch shows
+you how to implement simple audio renderer for subscribed streams' audio.
+
+The `BasicAudioDevice()` constructor method sets up a file to save the incoming audio to a file.
+This is done simply to illustrate a use of the custom audio driver's audio renderer.
+The app requires the following permissions, defined in the AndroidManifest.xml file:
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+The `BaseAudioDevice initRenderer()` method is called when the app initializes the audio renderer.
+The BasicAudioDevice implementation of this method instantiates a new File object, to which
+the the app will write audio data:
+
+     @Override
+     public boolean initRenderer() {
+        mRendererBuffer = ByteBuffer.allocateDirect(SAMPLING_RATE * 2); // Each sample has 2 bytes
+        mRendererFile =
+          new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+                   , "output.raw");
+        if (!mRendererFile.exists()) {
+            try {
+                mRendererFile.getParentFile().mkdirs();
+                mRendererFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return true;
+    }
+
+The `BaseAudioDevice.startRendering()` method is called when the audio device should start rendering
+(playing back) audio from subscribed streams. The BasicAudioDevice implementation of this method
+starts the `mCapturer` thread to be run in the queue after 1 second:
+
+     @Override
+     public boolean startRenderer() {
+         mRendererStarted = true;
+         mRendererHandler.postDelayed(mRenderer, mRendererIntervalMillis);
+         return true;
+     }
+
+The `mRenderer` thread gets 1 second worth of audio from the audio bus by calling the
+`readRenderData(buffer, numberOfSamples)` method of the AudioBus object. It then writes the audio
+data to the file (for sample purposes). And, if the audio device is still being used to render audio
+samples, it sets a timer to run the `mRendererHandler` thread again after 0.1 seconds:
+
+    private Handler mRendererHandler;
+    private Runnable mRenderer = new Runnable() {
+        @Override
+        public void run() {
+            mRendererBuffer.clear();
+            getAudioBus().readRenderData(mRendererBuffer, SAMPLING_RATE);
+            try {
+                FileOutputStream stream = new FileOutputStream(mRendererFile);
+                stream.write(mRendererBuffer.array());
+                stream.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            if (mRendererStarted && !mAudioDriverPaused) {
+                mRendererHandler.postDelayed(mRenderer, mRendererIntervalMillis);
+            }
+
+        }
+    };
+
+This example is intentionally simple for instructional purposes -- it simply writes the audio data
+to a file. In a more practical use of a custom audio driver, you could use the custom audio driver
+to play back audio to a Bluetooth device or to process audio before playing it back.
+
+# Basic Video Renderer
+
+To see the code for this sample, switch to the basic_render.step-1 branch. This branch shows you
+how to make minor modifications to the video renderer used by a Subscriber object. You can also
+use the same techniques to modify the video renderer used by a Publisher object (though this
+example only illustrates a custom renderer for a subscriber).
+
+In this example, the app uses a custom video renderer to display a black-and-white version of the
+Subscriber object's video.
+
+BlackWhiteVideoRender is a custom class that extends the BaseVideoRenderer protocol (defined
+in the OpenTok Android SDK). The BaseVideoRenderer class lets you define a custom video renderer
+to be used by an OpenTok publisher or subscriber.
+
+    mSubscriberRenderer = new BlackWhiteVideoRender(this);
+
+In the main ChatActivity class, after initializing a Subscriber object, the `setRenderer(renderer)`
+method of the Subscriber object is called to set the custom video renderer for the subscriber:
+
+    mSubscriber = new Subscriber(this, stream);
+    mSubscriber.setRenderer(mSubscriberRenderer);
+
+The `BlackWhiteVideoRender()` constructor sets a `mRenderView` property to a GLSurfaceView object.
+The app uses this object to display the video using OpenGL ES 2.0. The renderer for this
+GLSurfaceView object is set to a GLRendererHelper object. GLRendererHelper is a custom class that
+extends GLSurfaceView.Renderer, and it is used to render the subscriber video to the GLSurfaceView
+object:
+
+    public BlackWhiteVideoRender(Context context) {
+        mRenderView = new GLSurfaceView(context);
+        mRenderView.setEGLContextClientVersion(2);
+
+        mRenderer = new GLRendererHelper();
+        mRenderView.setRenderer(mRenderer);
+
+        mRenderView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+    }
+
+The GLRendererHelper class includes code that converts a video frame to
+a black-and-white representation.
+
+The `BaseVideoRenderer.onFrame()` method is called when the subscriber (or subscriber) renders
+a video frame to the video renderer. The frame is an BaseVideoRenderer.Frame object (defined by
+the OpenTok Android SDK).  In the BlackWhiteVideoRender implementation of this method, it takes
+the frame's image buffer, which is a YUV representation of the frame, and transforms it into
+black-and-white. It then passes the buffer to the `displayFrame()` method of the GLRendererHelper
+object and calls the `requestRender()` method of the GLSurfaceView object:
+
+    @Override
+    public void onFrame(Frame frame) {
+        ByteBuffer imageBuffer = frame.getBuffer();
+
+        // Image buffer is represented using three planes, Y, U and V.
+        // Data is laid out in a linear way in the imageBuffer variable
+        // Y plane is first, and its size is the same of the image (width * height)
+        // U and V planes are next, in order to produce a B&W image, we set both
+        // planes with the same value.
+
+        int startU = frame.getWidth() * frame.getHeight();
+        for (int i = startU; i < imageBuffer.capacity(); i++) {
+            imageBuffer.put(i, (byte)-127);
+        }
+
+        mRenderer.displayFrame(frame);
+        mRenderView.requestRender();
+    }
+
+The GLRendererHelper class renders the frame contents to an OpenGL surface in Android.
+
+
+# Basic Video Capturer
+
+To see the code for this sample, switch to the basic_capturer.step-1 branch. This branch shows you
+how to make minor modifications to the video capturer used by the Publisher class.
+
+In this example, the app uses a custom video capturer to publish random pixels (white noise).
+This is done simply to illustrate the basic principals of setting up a custom video capturer.
+(For a more practical example, see the Camera Video Capturer and Screen Video Capturer examples,
+described in the sections that follow.)
+
+In the `initializePublisher()` method ChatActivity class, after creating a Publisher object,
+the code calls the `setCapturer(capturer)` method of the Publisher object, passing in a
+NoiseVideoCapturer object:
+
+    mPublisher.setCapturer(new NoiseVideoCapturer(320, 240));
+
+NoiseVideoCapturer is a custom class that extends the BaseVideoCapturer class (defined
+in the OpenTok iOS SDK). This class lets you define a custom video capturer to be used
+by an OpenTok publisher.
+
+The `BaseVideoCapturer.init()` method initializes capture settings to be used by the custom
+video capturer. In this sample's custom implementation of BaseVideoCapturer (NoiseVideoCapturer)
+the `initCapture()` method sets properties of a `mCapturerSettings` property:
+
+    @Override
+    public void init() {
+        mCapturerHasStarted = false;
+        mCapturerIsPaused = false;
+
+        mCapturerSettings = new CaptureSettings();
+        mCapturerSettings.height = mHeight;
+        mCapturerSettings.width = mWidth;
+        mCapturerSettings.format = BaseVideoCapturer.ARGB;
+        mCapturerSettings.fps = FPS;
+        mCapturerSettings.expectedDelay = 0;
+    }
+
+The BaseVideoCapturer.CaptureSettings class (which defines this `mCapturerSettings` property)
+is defined by the OpenTok Android SDK. In this sample code, the format of the video capturer is
+set to use ARGB as the pixel format, with a specific number of frames per second, a specific height,
+and a specific width.
+
+The `[OTVideoCapture setVideoCaptureConsumer]` sets an OTVideoCaptureConsumer object (defined
+by the OpenTok iOS SDK) the the video consumer uses to transmit video frames to the publisher's
+stream. In the OTKBasicVideoCapturer, this method sets a local OTVideoCaptureConsumer instance
+as the consumer:
+
+    - (void)setVideoCaptureConsumer:(id<OTVideoCaptureConsumer>)videoCaptureConsumer
+    {
+        // Save consumer instance in order to use it to send frames to the session
+        self.consumer = videoCaptureConsumer;
+    }
+
+The `BaseVideoCapturer startCapture()` method is called when a publisher starts capturing video
+to send as a stream to the OpenTok session. This will occur after the `Session.publish(publisher)`
+method is called. In the NoiseVideoCapturer implementation of this method, the `run()`
+`mFrameProducer` thread is started:
+
+    @Override
+    public int startCapture() {
+        mCapturerHasStarted = true;
+        mFrameProducer.run();
+        return 0;
+    }
+
+The `[self produceFrame]` method creates a buffer of bytes and fills it with random noise.
+(Note that each frame is four bytes in the buffer, defining the constituent ARGB values for
+the frame.) It then passes the buffer into the
+`provideByteArrayFrame(data, format, width, height, rotation, mirrorX)` method, defined by the
+BaseVideoCapturer class (in the OpenTok Android SDK):
+
+    Runnable mFrameProducer = new Runnable() {
+        @Override
+        public void run() {
+            Random random = new Random();
+            byte[] buffer = new byte[mWidth * mHeight * 4];
+            byte[] randoms = new byte[4];
+            for (int i = 0; i < mWidth * mHeight * 4; i += 4) {
+                random.nextBytes(randoms);
+                buffer[i] = randoms[0];
+                buffer[i + 1] = randoms[1];
+                buffer[i + 2] = randoms[2];
+                buffer[i + 3] = randoms[3];
+            }
+
+            provideByteArrayFrame(buffer, BaseVideoCapturer.ARGB,
+                    mWidth, mHeight, Surface.ROTATION_0, false);
+
+            if (mCapturerHasStarted && !mCapturerIsPaused) {
+                mFrameProducerHandler.postDelayed(mFrameProducer, mFrameProducerIntervalMillis);
+            }
+        }
+    };
+
+This causes the publisher to send the frame of data to the video stream in the session.
+If the session is still publishing data, the `mFrameProducer` thread is run again
+after a specified delay (`mFrameProducerIntervalMillis`), causing another frame of video to be
+captured and published.
+
+
+# Camera video capturer
+
+To see the code for this sample, switch to the camera_capturer.step-1 branch. This branch shows you
+how to use a custom video capturer using the device camera as the video source.
+
+Before studying this sample, see the basic_capturer.step-1 sample.
+
+In the `initializePublisher()` method of the ChatActivity class, after creating a Publisher object,
+the code calls the `setCapturer(capturer)` method of the Publisher object, passing in a
+CameraVideoCapturer object:
+
+    mPublisher.setCapturer(new CameraVideoCapturer(this, 640, 480, 30));
+
+CameraVideoCapturer is a custom class that extends the BaseVideoCapturer class (defined
+in the OpenTok iOS SDK). This class lets you define a custom video capturer to be used
+by an OpenTok publisher. The CameraVideoCapturer class uses a FrontCameraFrameProvider
+object to capture frames from the Android camera:
+
+    public CameraVideoCapturer(Context context, int width, int height, int fps) {
+        mWidth = width;
+        mHeight = height;
+        mDesiredFps = fps;
+
+        mHelper = new FrontCameraFrameProvider(context, mWidth, mHeight, mDesiredFps);
+        mHelper.setHelperListener(this);
+    }
+
+The FrontCameraFrameProvider class uses a FrontCameraFrameProvider.ProviderListener interface
+to send events when frames are available for capture. The CameraVideoCapturer class
+implements this interface and its `cameraFrameReady()` method.
+
+The `BaseVideoCapturer.init()` method initializes capture settings to be used by the custom
+video capturer. In this sample's custom implementation of BaseVideoCapturer (CameraVideoCapturer)
+the `initCapture()` it also calls the `init()` method of the FrontCameraFrameProvider class:
+
+    @Override
+    public void init() {
+        mCapturerHasStarted = false;
+        mCapturerIsPaused = false;
+
+        mCapturerSettings = new CaptureSettings();
+        mCapturerSettings.height = mHeight;
+        mCapturerSettings.width = mWidth;
+        mCapturerSettings.expectedDelay = 0;
+        mCapturerSettings.format = BaseVideoCapturer.NV21;
+
+        mHelper.init();
+    }
+
+The `FrontCameraFrameProvider.init()` method creates a Camera object.
+
+The `BaseVideoCapturer.startCapture()` method of is called when a Publisher using the video capturer
+starts capturing video to send as a stream to the OpenTok session. This will occur after the
+`Session.publish(publisher)` method is called. The CameraVideoCapturer of this method calls the
+`startCapture()` method of the FrontCameraFrameProvider object:
+
+    @Override
+    public int startCapture() {
+        mCapturerHasStarted = true;
+        mHelper.startCapture();
+        return 0;
+    }
+
+The `FrontCameraFrameProvider.startCapture()` method sets some parameters of the Android Camera,
+based on parameters set at initialization. It creates a callback buffer for the camera (calling
+the `Camera.addCallbackBuffer(buffer)` method). It also sets itself as the implementer of the
+Camera.PreviewCallback interface, and it calls the `startPreview()` method of the Camera object:
+
+    mCamera.setPreviewCallbackWithBuffer(this);
+    mCamera.startPreview();
+
+The FrontCameraFrameProvider implementation of the
+`FrontCameraFrameProvider.onPreviewFrame(data, camera)` method. This method is called when
+preview frames are displayed by the camera. The FrontCameraFrameProvider calls the
+`cameraFrameReady()` method of the ProviderListener object, which is the CameraVideoCapturer
+object in this app:
+
+    @Override
+    public void onPreviewFrame(byte[] data, Camera camera) {
+        mPreviewBufferLock.lock();
+        if (data.length == mExpectedFrameSize) {
+            // Get the rotation of the camera
+            int currentRotation = compensateCameraRotation(mCurrentDisplay
+                    .getRotation());
+
+            if (mListener != null) {
+                mListener.cameraFrameReady(data, mCaptureActualWidth, mCaptureActualHeight,
+                        currentRotation, isFrontCamera());
+            }
+
+            // Reuse the video buffer
+            camera.addCallbackBuffer(data);
+        }
+        mPreviewBufferLock.unlock();
+    }
+
+
+The CameraVideoCapturer implementation of the `cameraFrameReady()` method (defined by the
+Camera.PreviewCallback interface) calls the `provideByteArrayFrame()` method, defined by the
+BaseVideoCapturer class (which the CameraVideoCapturer class extends):
+
+    @Override
+    public void cameraFrameReady(byte[] data, int width, int height, int rotation, boolean mirror) {
+        provideByteArrayFrame(data, NV21, width,
+                height, rotation, mirror);
+    }
+
+This sends a byte array of data to the publisher, to be used for the next video frame published.
+
+Note that the CameraVideoCapturer also includes code for determining which camera is being used,
+working with the camera orientation and rotation, and determining the image size.
+
+
+# Screen sharing (screensharing.step-1)
+
+To see the code for this sample, switch to the screensharing.step-1 branch. This branch shows you
+how to capture the screen (an Android View) using a custom video capturer.
+
+Before studying this sample, see the basic-capturer-step.1 sample.
+
+This sample code demonstrates how to use the OpenTok Android SDK to publish a screen-sharing video,
+using the device screen as the source for the stream's video.
+
+The ChatActivity class uses WebView object as the source for the screen-sharing video in the
+published stream.
+
+In the `initializePublisher()` method of the ChatActivity class, after creating a Publisher object
+the code calls the `setCapturer(capturer)` method of the Publisher object, passing in a
+ScreensharingCapturer object:
+
+    mPublisher.setCapturer(new ScreensharingCapturer(mScreensharedView));
+
+ScreensharingCapturer is a custom class that extends the BaseVideoCapturer class (defined
+in the OpenTok iOS SDK). This class lets you define a custom video capturer to be used
+by an OpenTok publisher. The constructor of the ScreensharingCapturer class is passed an Android
+View object, which it will use as the source for the video:
+
+    public ScreensharingCapturer(View view) {
+        mContentView = view;
+        mFrameProducerHandler = new Handler();
+    }
+
+The constructor also creates a new Handler object to process the `mFrameProducer` Runnable object.
+
+The `initCapture` method is used to initialize the capture and sets value for the pixel format of
+an OTVideoFrame object. In this  example, it is set to RGB.
+
+The `BaseVideoCapturer.init()` method initializes capture settings to be used by the custom
+video capturer. In this sample's custom implementation of BaseVideoCapturer (ScreensharingCapturer)
+the `initCapture()` it also sets some settings for the video capturer:
+
+    @Override
+    public void init() {
+        mCapturerHasStarted = false;
+        mCapturerIsPaused = false;
+
+        mCapturerSettings = new CaptureSettings();
+        mCapturerSettings.fps = FPS;
+        mCapturerSettings.width = mWidth;
+        mCapturerSettings.height = mHeight;
+        mCapturerSettings.format = BaseVideoCapturer.ARGB;
+    }
+
+The `startCapture()` method starts the `mFrameProducer` thread after 1/15 second:
+
+    @Override
+    public int startCapture() {
+        mCapturerHasStarted = true;
+        mFrameProducerHandler.postDelayed(mFrameProducer, mFrameProducerIntervalMillis);
+        return 0;
+    }
+
+The mFrameProducer` thread gets a Bitmap representation of the `mContentView` object
+(the WebView), writes its pixels to a buffer, and then calls the `provideIntArrayFrame()`
+method, passing in that buffer:
+
+    private Runnable mFrameProducer = new Runnable() {
+        @Override
+        public void run() {
+            int width = mContentView.getWidth();
+            int height = mContentView.getHeight();
+
+            if (frameBuffer == null || mWidth != width || mHeight != height) {
+                mWidth = width;
+                mHeight = height;
+                frameBuffer = new int[mWidth * mHeight];
+            }
+
+            mContentView.setDrawingCacheEnabled(true);
+            mContentView.buildDrawingCache();
+            Bitmap bmp = mContentView.getDrawingCache();
+            if (bmp != null) {
+                bmp.getPixels(frameBuffer, 0, width, 0, 0, width, height);
+                mContentView.setDrawingCacheEnabled(false);
+                provideIntArrayFrame(frameBuffer, ARGB, width, height, 0, false);
+            }
+
+            if (mCapturerHasStarted && !mCapturerIsPaused) {
+                mFrameProducerHandler.postDelayed(mFrameProducer, mFrameProducerIntervalMillis);
+            }
+        }
+    };
+
+The `provideIntArrayFrame()` method, defined by the BaseVideoCapturer class (which the
+CameraVideoCapturer class extends) sends an integer array of data to the publisher, to be used
+for the next video frame published.
+
+If the publisher is still capturing video, the thread then starts again after another 1/15 of a
+second, so that the capturer continues to supply the publisher with new video frames to publish.
+
+
 Other resources
 ---------------
 
 See the following:
 
-* [API reference] [4] -- Provides details on the OpenTok iOS Android API
+* [API reference] [4] -- Provides details on the OpenTok Android API
 * [Tutorials] [5] -- Includes conceptual information and code samples for all OpenTok features
 
 [1]: https://tokbox.com/opentok/libraries/client/android/
